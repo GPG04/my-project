@@ -23,7 +23,7 @@ app.add_middleware(
 
 class User(BaseModel):
     username: str
-    password: str
+    password: bytes
     is_admin: Union[bool, None] = None
 
 @app.get("/users")
@@ -78,8 +78,9 @@ def deleteUser(user_id):
 def authenticate(user: User):
     try:
         cursor.execute("SELECT password FROM Users WHERE username=%s;", (user.username,))
-        for x in cursor.fetchone:
-            if bcrypt.checkpw(user.password, x) == False:
-                raise Exception("Error Logging In")
+        res: bytes
+        (res,) = cursor.fetchone()
+        print(res)
+        print(bcrypt.checkpw(user.password, res))
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
