@@ -91,16 +91,17 @@ def authenticate(user: User):
         (user_id, res) = cursor.fetchone()
         if bcrypt.checkpw(user.password, res) == False:
             raise Exception("Error Logging In")
-        Token = jwt.encode({"id": user_id}, key, algorithm="HS256")
+        Token = jwt.encode({"id":user_id}, key, algorithm="HS256")
         print(Token)
     except (Exception, psycopg.DatabaseError) as error:
         print(error)
 
-@app.get("auth/me")
+@app.get("/auth/me")
 async def isLoggedIn(Token: Annotated[str | None, Header()] = None):
     try:
-        print(Token)
-        id = jwt.decode(Token, key, algorithms="HS256")
-        print(id)
-    except:
-        print("Error")
+        res = jwt.decode(Token, key, algorithms="HS256")
+        id = res["id"]
+        cursor.execute("SELECT * FROM Users WHERE id=%s;", (id,))
+        print(cursor.fetchone())
+    except (Exception, psycopg.DatabaseError) as error:
+        print(error)
