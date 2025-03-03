@@ -1,6 +1,7 @@
 from typing import Union, Annotated
 
 from array import *
+from uuid import *
 from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -43,7 +44,7 @@ def getUsers():
         print(error)
 
 @app.get("/users/{user_id}")
-def getUser(user_id: int):
+def getUser(user_id: UUID):
     try:
         cursor.execute("SELECT * FROM Users WHERE id = %s;", (user_id,))
         (id, username, password, is_admin) = cursor.fetchone()
@@ -55,8 +56,8 @@ def getUser(user_id: int):
 def postUser(user: User):
     try:
         hash = bcrypt.hashpw(user.password, salt)
-        SQL = ("INSERT INTO Users (username, password) VALUES (%s, %s) RETURNING *;")
-        data = (user.username, hash)
+        SQL = ("INSERT INTO Users (id, username, password) VALUES (%s, %s, %s) RETURNING *;")
+        data = (uuid4(), user.username, hash)
         cursor.execute(SQL, data)
         db.commit()
         (id, username, password, is_admin) = cursor.fetchone()
@@ -65,12 +66,13 @@ def postUser(user: User):
         print(error)
 
 @app.put("/users/{user_id}")
-def updateUser(user_id: int, user: User, Token: Annotated[str | None, Header()] = None):
+def updateUser(user_id: UUID, user: User, Token: Annotated[str | None, Header()] = None):
     try:
         res = jwt.decode(Token, key, algorithms="HS256")
-        id: int = res["id"]
+        id: Union[str | UUID] = res["id"]
         cursor.execute("SELECT is_admin FROM Users WHERE id=%s", (id,))
         (is_admin,) = cursor.fetchone()
+        id = UUID(id)
 
         if id == user_id or is_admin == True:
             hash = bcrypt.hashpw(user.password, salt)
@@ -86,12 +88,13 @@ def updateUser(user_id: int, user: User, Token: Annotated[str | None, Header()] 
         print(error)
 
 @app.delete("/users/{user_id}")
-def deleteUser(user_id: int, Token: Annotated[str | None, Header()] = None):
+def deleteUser(user_id: UUID, Token: Annotated[str | None, Header()] = None):
     try:
         res = jwt.decode(Token, key, algorithms="HS256")
-        id: int = res["id"]
+        id: Union[str | UUID] = res["id"]
         cursor.execute("SELECT is_admin FROM Users WHERE id=%s;", (id,))
         (is_admin,) = cursor.fetchone()
+        id = UUID(id)
 
         if user_id == id or is_admin == True:
             cursor.execute("DELETE FROM Users WHERE id=%s;", (user_id,))
@@ -107,9 +110,10 @@ def authenticate(user: User):
         cursor.execute("SELECT id, password FROM Users WHERE username=%s;", (user.username,))
         res: bytes
         (user_id, res) = cursor.fetchone()
+        id_string = str(user_id)
         if bcrypt.checkpw(user.password, res) == False:
             raise Exception("Error Logging In")
-        Token = jwt.encode({"id":user_id}, key, algorithm="HS256")
+        Token = jwt.encode({"id":id_string}, key, algorithm="HS256")
         print(Token)
     except (Exception, psycopg.DatabaseError) as error:
         print(error)
@@ -118,7 +122,7 @@ def authenticate(user: User):
 async def isLoggedIn(Token: Annotated[str | None, Header()] = None):
     try:
         res = jwt.decode(Token, key, algorithms="HS256")
-        id = res["id"]
+        id: UUID = res["id"]
         cursor.execute("SELECT * FROM Users WHERE id=%s;", (id,))
         (id, username, password, is_admin) = cursor.fetchone()
         return {"id": id, "username": username, "password": password, "is_admin": is_admin}
