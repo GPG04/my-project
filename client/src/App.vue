@@ -1,29 +1,26 @@
-<template>
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
-  <div>
-    <h1>{{ message }}</h1>
-  </div>
-  
-  </template>
-  
-  <script>
-  
-  export default {
-    
-  data() {
-    return {
-      message: "",
-    };
+const router = useRouter()
+const route = useRoute()
+
+const search = computed({
+  get() {
+    return route.query.search ?? ''
   },
-  
-    mounted() {
-      fetch("http://localhost:8000/")
-      .then(response => response.text())
-      .then(data => {
-        this.message = data;
-      });
-  },
-  
-  };
-  
-  </script>
+  set(search) {
+    router.replace({ query: { search } })
+  }
+})
+</script>
+
+<template>
+  <main>
+    <RouterView />
+  </main>
+</template>
+
+<style>
+
+</style>
