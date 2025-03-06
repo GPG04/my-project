@@ -1,6 +1,5 @@
 from typing import Union, Annotated
 
-from array import *
 from uuid import *
 from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,7 +35,7 @@ class User(BaseModel):
 def getUsers():
     try:
         cursor.execute("SELECT * FROM Users;")
-        myArr: array[dict] = []
+        myArr: list[dict] = []
         for (id, username, password, is_admin) in cursor.fetchall():
             myArr.append({"id": id, "username": username, "password": password, "is_admin": is_admin})
         return myArr
@@ -108,13 +107,12 @@ def deleteUser(user_id: UUID, Token: Annotated[str | None, Header()] = None):
 def authenticate(user: User):
     try:
         cursor.execute("SELECT id, password FROM Users WHERE username=%s;", (user.username,))
-        res: bytes
-        (user_id, res) = cursor.fetchone()
+        (user_id, password) = cursor.fetchone()
         id_string = str(user_id)
-        if bcrypt.checkpw(user.password, res) == False:
+        if bcrypt.checkpw(user.password, password) == False:
             raise Exception("Error Logging In")
         Token = jwt.encode({"id":id_string}, key, algorithm="HS256")
-        print(Token)
+        return Token
     except (Exception, psycopg.DatabaseError) as error:
         print(error)
 

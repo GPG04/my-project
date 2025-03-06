@@ -1,29 +1,30 @@
-<template>
+<script setup lang="ts">
+  import HomeInfo from './HomeInfo.vue';
+</script>
 
-    <div id="container">
-        <p>{{ message }}</p>
-    </div>
+<template>
+  <Suspense>
+    <template #fallback>
+      <div>Loading...</div>
+    </template>
+    <template #default>
+      <HomeInfo />
+    </template>
+  </Suspense>
 
 </template>
 
-<script lang="ts">
+<style>
+  #container {
+    height: 100%;
+    background-color: green;
+    display: flex;
+    flex-direction: column;
+    margin-left: 100px;
+    margin-right: 100px;
+}
 
-export default {
-    
-    data() {
-      return {
-        message: "",
-      };
-    },
-    
-      mounted() {
-        fetch("http://localhost:8000/users")
-        .then(response => response.text())
-        .then(data => {
-          this.message = data;
-        });
-    },
-    
-    };
-
-</script>
+#container > * {
+    color: white;
+}
+</style>
